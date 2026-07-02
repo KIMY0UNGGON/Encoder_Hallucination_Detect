@@ -5,10 +5,13 @@ import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence
 from transformers import AutoTokenizer, AutoModel
 from peft import LoraConfig, get_peft_model
+from huggingface_hub import hf_hub_download
 from safetensors import safe_open
 from safetensors.torch import load_file
 
-CKPT_PATH = "model_data/model.safetensors"
+HF_REPO = "Y0UNGGON/ENCODER_MODEL_HALLU_CLS_TEST"   # 백본 + 학습 체크포인트
+CKPT_FILE = "cls_checkpoint.safetensors"            # state_dict + cfg/thresholds(metadata)
+
 TEST_JSON = "상세검색_국회회의록_발언목록_2026-07-01_데이터.json"
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 LABELS = ["intrinsic", "logical", "extrinsic"]
@@ -119,18 +122,19 @@ class CLSClassifier(nn.Module):
         return self.head(self.final_norm(pooled))                        # [B, 3]
 
 
-def load_model(ckpt_path=CKPT_PATH, device=DEVICE):
-    """model.safetensors → (model, tokenizer, thresholds, cfg).
-    텐서 = state_dict, metadata(JSON 문자열) = cfg/thresholds."""
+def load_model(repo_id=HF_REPO, device=DEVICE):
+    """HF repo → (model, tokenizer, thresholds, cfg).  전부 허깅페이스에서 다운로드(캐시)."""
+    ckpt_path = hf_hub_download(repo_id=repo_id, filename=CKPT_FILE)
     state = load_file(ckpt_path)
     with safe_open(ckpt_path, framework="pt") as f:
         meta = f.metadata()
     cfg = json.loads(meta["cfg"])
     thresholds = json.loads(meta["thresholds"])
 
-    tok = AutoTokenizer.from_pretrained(cfg["tokenizer"])
+    tok = AutoTokenizer.from_pretrained(cfg["tokenizer"])   # jhu-clsp/mmBERT-base (학습과 동일)
     sep_id = tok.sep_token_id if tok.sep_token_id is not None else tok.eos_token_id
-    backbone = AutoModel.from_pretrained(cfg["backbone"])
+    backbone = AutoModel.from_pretrained(repo_id)           # 아키텍처용 — 가중치는 state 로 전부 덮임
+
     lc = LoraConfig(r=cfg["lora_r"], lora_alpha=cfg["lora_alpha"],
                     lora_dropout=cfg["lora_dropout"],
                     target_modules=cfg["lora_targets"], bias="none")
@@ -169,6 +173,8 @@ class return_model:
 
 
 if __name__ == "__main__":
+
+
     model = return_model()
 
     with open(TEST_JSON, encoding="utf-8") as f:
