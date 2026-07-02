@@ -1,0 +1,3 @@
+transformers==4.56.2
+peft==0.18.1
+safetensors==0.7.0

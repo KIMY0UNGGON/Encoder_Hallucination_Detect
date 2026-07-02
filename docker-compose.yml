@@ -1,0 +1,16 @@
+# 실행:  docker compose up --build
+# GPU 없으면 deploy 블록 지우면 CPU 로 동작 (느림)
+name: hallu-model    # 폴더명이 한글이라 자동 프로젝트명 생성 실패 → 명시 필수
+services:
+  model:
+    build: .
+    image: hallu-model
+    volumes:
+      - .:/app          # model.py + model_data/ + 백본 + 테스트 JSON 전부 마운트
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

@@ -1,0 +1,4 @@
+# 빌드 컨텍스트 최소화 — 이미지에는 model.py + requirements.txt 만 복사
+*
+!model.py
+!requirements.txt

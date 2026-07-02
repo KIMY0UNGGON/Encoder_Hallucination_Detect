@@ -1,0 +1,7 @@
+# 모델 가중치 — GitHub 100MB 제한 초과 (HF Hub 등으로 별도 배포)
+model_data/
+modernbert_after_klue_nli/*.safetensors
+modernbert_after_klue_nli/training_args.bin
+
+__pycache__/
+*.pyc
